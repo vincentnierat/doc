@@ -1,144 +1,110 @@
-# Spécifications Techniques : Questionnaire de Certification IA
+# Spécifications Techniques : Cours de Certification IA
 
-**Version : 1.0 (Draft)**
+**Version : 2.1 (Draft)**
 **Date : 16/10/2025**
 
 ## 1. Objectif de la fonctionnalité
 
-L'objectif est de créer un questionnaire de certification sur l'IA pour les candidats. Ce questionnaire est multi-étapes, dynamique, et fournit un feedback immédiat à l'utilisateur pour favoriser l'apprentissage. La progression est sauvegardée à chaque étape.
+L'objectif est de créer un **cours de certification sur l'IA** interactif pour les candidats. Le cours est présenté sous la forme d'un tableau de bord, structuré en **chapitres** et **sections**. Chaque section contient une série d'exercices (questions) avec un feedback immédiat pour favoriser l'apprentissage. La progression est suivie au niveau global, par chapitre et par section.
 
 ## 2. Parcours Utilisateur
 
-1.  Après paiement Stripe, l'utilisateur accède au questionnaire depuis une section dédiée de son profil. (refléchir si le paiement intervient avant ou après).
-2.  L'étape 1 du questionnaire s'affiche avec ses questions.
-3.  L'utilisateur répond aux questions de l'étape. Les types de réponses peuvent être : choix unique (radio), choix multiples (checkbox), texte libre (input) ou nombre (input number).
-4.  L'utilisateur clique sur le bouton "Valider l'étape".
-5.  Les champs de réponse sont désactivés.
-6.  Pour chaque question, la correction s'affiche :
-    *   La réponse de l'utilisateur est mise en évidence (vert si correct, rouge si incorrect).
-    *   En cas d'erreur, la bonne réponse est affichée sous la question.
-    *   Une explication peut également être affichée.
-7.  Le bouton "Valider l'étape" se transforme en "Étape suivante".
-8.  L'utilisateur clique sur "Étape suivante" pour charger la prochaine série de questions. Le processus se répète jusqu'à la dernière étape.
-9.  À la fin de la dernière étape, le bouton est "Terminer le questionnaire". Un clic sur ce bouton enregistre la complétion finale du test.
+### 2.1. Écran Principal / Tableau de Bord du Cours
+
+1.  **Accès :** L'utilisateur accède à l'écran principal du cours depuis son profil.
+2.  **En-tête :** L'écran affiche un titre de bienvenue et des statistiques globales :
+    *   **Progression totale :** Un pourcentage représentant l'avancement global dans le cours (ex: 46%).
+    *   **Exercices complétés :** Un ratio du nombre total d'exercices terminés (ex: 20/25).
+3.  **Grille des Chapitres :**
+    *   L'écran présente une grille de cartes, chaque carte représentant un **chapitre**.
+    *   Chaque carte de chapitre contient : une illustration unique, le titre du chapitre (ex: "Chapitre 1 : Qu'est-ce que l'IA ?").
+    *   À l'intérieur de chaque carte, une liste de **sections** est affichée, avec pour chacune le nombre d'exercices réussis (ex: "I. Comment définir l'IA ? - 1/1").
+4.  **Navigation :** Un clic sur une section spécifique d'un chapitre navigue l'utilisateur vers l'écran d'exercices correspondant.
+
+### 2.2. Déroulement d'un Exercice (Questionnaire de Section)
+
+1.  **Affichage :** L'écran affiche les questions/exercices pour la section sélectionnée.
+2.  **Interaction :** L'utilisateur répond aux questions. Les types de réponses peuvent être : choix unique (radio), choix multiples (checkbox), texte libre (input) ou nombre (input number).
+3.  **Validation :** L'utilisateur clique sur "Valider".
+4.  **Correction :** Pour chaque question, la correction s'affiche (réponse de l'utilisateur, bonne réponse si erreur, explication).
+5.  **Progression :** Une fois l'exercice terminé, l'utilisateur est redirigé vers le tableau de bord principal, qui affiche maintenant sa progression mise à jour.
 
 ## 3. Architecture Technique
 
 ### 3.1. Modèles de Données (Typescript)
 
-Le système s'appuiera sur les modèles de données suivants, définis dans `types/aiCertificationQuiz.ts`.
+La nouvelle structure hiérarchique est la suivante :
 
 ```typescript
-// types/aiCertificationQuiz.ts
+// types/aiCourse.ts
 
+// --- Modèles pour le Tableau de Bord ---
+export interface CourseStats {
+  completionPercentage: number; // Pourcentage de complétion global
+  completedExercises: number;
+  totalExercises: number;
+}
+
+export interface SectionProgress {
+  sectionId: string;
+  titleKey: string;
+  completedExercises: number;
+  totalExercises: number;
+}
+
+export interface Chapter {
+  chapterId: string;
+  titleKey: string;
+  illustrationUrl: string;
+  sections: SectionProgress[];
+}
+
+export interface CourseDashboard {
+  stats: CourseStats;
+  chapters: Chapter[];
+}
+
+// --- Modèles pour un Exercice de Section ---
 export type QuestionType = 'radio' | 'checkbox' | 'text' | 'number';
 
-export interface QuestionOption {
-  optionId: string;
-  textKey: string; // Clé de traduction pour le texte de l'option
-}
+export interface QuestionOption { /* ... comme avant ... */ }
 
-export interface Question {
-  questionId: string;
-  textKey: string; // Clé de traduction pour la question
-  questionType: QuestionType;
-  options?: QuestionOption[]; // Présent pour 'radio' et 'checkbox'
-}
+export interface Question { /* ... comme avant ... */ }
 
-export interface QuizStep {
-  stepId: string;
-  stepTitleKey: string; // Clé de traduction pour le titre de l'étape
-  illustrationUrl?: string;
+export interface SectionExercise {
+  sectionId: string;
+  titleKey: string;
   questions: Question[];
 }
 ```
 
 ### 3.2. Contrat d'API (Endpoints)
 
-La communication avec le back-end suivra le contrat ci-dessous.
+*   **Récupérer le tableau de bord :**
+    *   **Endpoint :** `GET /api/ai-course/dashboard`
+    *   **Description :** Récupère toutes les données nécessaires pour afficher l'écran principal du cours.
+    *   **Réponse (200 OK) :** Un objet de type `CourseDashboard`.
 
-#### 3.2.1. Récupérer une étape du questionnaire
+*   **Récupérer les exercices d'une section :**
+    *   **Endpoint :** `GET /api/ai-course/section/{sectionId}/exercises`
+    *   **Description :** Récupère la liste des questions pour une section donnée.
+    *   **Réponse (200 OK) :** Un objet de type `SectionExercise`.
 
-*   **Endpoint :** `GET /api/quiz/step/{stepNumber}`
-*   **Description :** Récupère la structure complète d'une étape donnée.
-*   **Réponse (200 OK) :**
-    ```json
-    {
-      "stepId": "step1",
-      "stepTitleKey": "quiz.ai.step1.title",
-      "illustrationUrl": "/images/ai_step1.png",
-      "questions": [
-        {
-          "questionId": "q1",
-          "textKey": "quiz.ai.step1.q1.text",
-          "questionType": "radio",
-          "options": [
-            { "optionId": "q1opt1", "textKey": "quiz.ai.step1.q1.option1" },
-            { "optionId": "q1opt2", "textKey": "quiz.ai.step1.q1.option2" }
-          ]
-        }
-      ]
-    }
-    ```
-
-#### 3.2.2. Soumettre les réponses d'une étape
-
-*   **Endpoint :** `POST /api/quiz/step/{stepId}/submit`
-*   **Description :** Envoie les réponses de l'utilisateur pour une étape, sauvegarde la progression et renvoie la correction.
-*   **Payload (Requête) :**
-    ```json
-    {
-      "answers": [
-        { "questionId": "q1", "answer": "q1opt1" }
-      ]
-    }
-    ```
-*   **Réponse (200 OK) :**
-    ```json
-    {
-      "feedback": [
-        {
-          "questionId": "q1",
-          "isCorrect": false,
-          "userAnswer": "q1opt1",
-          "correctAnswer": "q1opt2",
-      "explanationKey": "quiz.ai.step1.q1.explanation"
-        }
-      ]
-    }
-    ```
+*   **Soumettre les réponses d'une section :**
+    *   **Endpoint :** `POST /api/ai-course/section/{sectionId}/submit`
+    *   **Description :** Envoie les réponses, sauvegarde la progression et renvoie la correction.
+    *   **Réponse (200 OK) :** Un objet `feedback` comme défini précédemment.
 
 ### 3.3. Architecture Front-end
 
-#### 3.3.1. Gestion de l'État (Redux)
+*   **Composants React :**
+    *   `CourseDashboardScreen.tsx` : Nouvel écran principal affichant le tableau de bord.
+    *   `ChapterCard.tsx` : Affiche un chapitre et la liste de ses sections.
+    *   `ExerciseScreen.tsx` : Écran qui gère le déroulement d'un questionnaire pour une section (ancien `QuizContainer`).
+    *   `QuestionRenderer.tsx` : Inchangé, affiche dynamiquement une question.
+*   **Gestion de l'État (Redux) :**
+    *   Un slice `courseDashboard.slice.ts` pour les données du tableau de bord.
+    *   Un slice `exercise.slice.ts` pour gérer l'état d'un exercice en cours.
 
-Un nouveau slice Redux (`aiCertificationQuiz.slice.ts`) sera créé pour gérer l'état local du questionnaire.
-
-*   **État initial :**
-    ```typescript
-    {
-      currentStep: 1,
-      stepStatus: 'answering', // 'answering' | 'loading' | 'submitted'
-      userAnswers: {}, // { "q1": "q1opt1" }
-      stepResults: {} // Stocke le payload de feedback de l'API
-    }
-    ```
-
-#### 3.3.2. Composants React
-
-De nouveaux composants seront créés dans `components/candidate/aiCertificationQuiz/`.
-
-*   **`QuizContainer.tsx` :** Composant principal qui gère la logique de récupération des données, l'état global du quiz et l'affichage de l'étape courante.
-*   **`QuizStep.tsx` :** Affiche les informations d'une étape (titre, questions) et gère les deux modes (`Saisie` et `Correction`).
-*   **`QuestionRenderer.tsx` :** Composant "intelligent" qui lit le `questionType` d'une question et affiche le champ de formulaire correspondant (radio, checkbox, input...).
-
-### 3.4. Gestion des Traductions (i18n)
-
-La stratégie de traduction s'appuie sur le système existant (`/locales`).
-
-*   Le back-end fournit des **clés de traduction** (ex: `quiz.ai.step1.title`).
-*   Le front-end utilise ces clés avec la fonction `t()` pour chercher la traduction correspondante dans les fichiers JSON (`fr.json`, `en.json`, etc.) embarqués dans l'application.
-*   Toutes les traductions sont donc gérées et centralisées côté front-end.
-
-
+## Les question libres ne feront pas partie du questionnaire
 ![elementsofai screenshot](./elementsofai.png)
