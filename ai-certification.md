@@ -1,6 +1,6 @@
 # Spécifications Techniques : Cours de Certification IA
 
-**Version : 2.2 (Draft)**
+**Version : 2.3 (Draft)**
 **Date : 16/10/2025**
 
 ## 1. Objectif de la fonctionnalité
@@ -78,6 +78,28 @@ export interface SectionExercise {
 }
 ```
 
+#### 3.1.1. Exemple d'un objet Question reçu de l'API
+
+Voici un exemple concret de l'objet JSON pour une seule question, tel qu'il serait retourné par l'API dans le tableau `questions`. Notez comment les `textKey` correspondent à la structure du fichier de traduction.
+
+```json
+{
+  "questionId": "q1",
+  "textKey": "course_ai.chapters.chapter1.sections.section1_1.exercises.q1.text",
+  "questionType": "radio",
+  "options": [
+    {
+      "optionId": "opt1",
+      "textKey": "course_ai.chapters.chapter1.sections.section1_1.exercises.q1.options.opt1"
+    },
+    {
+      "optionId": "opt2",
+      "textKey": "course_ai.chapters.chapter1.sections.section1_1.exercises.q1.options.opt2"
+    }
+  ]
+}
+```
+
 ### 3.2. Contrat d'API (Endpoints)
 
 *   **Récupérer le tableau de bord :**
@@ -145,7 +167,6 @@ Voici un exemple de la manière dont les clés seraient structurées dans un fic
   }
 }
 ```
-
 
 
 ## ⚠ Les question libres ne feront pas partie du questionnaire
