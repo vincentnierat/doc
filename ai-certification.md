@@ -1,48 +1,66 @@
 # Spécifications Techniques : Cours de Certification IA
 
-**Version : 2.3 (Draft)**
+**Version : 4.0 (Draft)**
 **Date : 16/10/2025**
 
 ## 1. Objectif de la fonctionnalité
 
-L'objectif est de créer un **cours de certification sur l'IA** interactif pour les candidats. Le cours est présenté sous la forme d'un tableau de bord, structuré en **chapitres** et **sections**. Chaque section contient une série d'exercices (questions) avec un feedback immédiat pour favoriser l'apprentissage. La progression est suivie au niveau global, par chapitre et par section.
+L'objectif est de créer un **cours de certification sur l'IA** interactif et monétisé pour les candidats, disponible en niveaux **Base** et **Pro**. Le cours est présenté sous la forme d'un tableau de bord, structuré en chapitres et sections. Il intègre des exercices interactifs (QCM) et du contenu de lecture, et s'interface avec la gamification et le score d'employabilité du candidat.
 
 ## 2. Parcours Utilisateur
 
-### 2.1. Écran Principal / Tableau de Bord du Cours
+### 2.1. Accès et Écran de Sélection (Base/Pro)
 
-1.  **Accès :** L'utilisateur accède à l'écran principal du cours depuis son profil.
-2.  **En-tête :** L'écran affiche un titre de bienvenue et des statistiques globales :
-    *   **Progression totale :** Un pourcentage représentant l'avancement global dans le cours (ex: 46%).
-    *   **Exercices complétés :** Un ratio du nombre total d'exercices terminés (ex: 20/25).
-3.  **Grille des Chapitres :**
-    *   L'écran présente une grille de cartes, chaque carte représentant un **chapitre**.
-    *   Chaque carte de chapitre contient : une illustration unique, le titre du chapitre (ex: "Chapitre 1 : Qu'est-ce que l'IA ?").
-    *   À l'intérieur de chaque carte, une liste de **sections** est affichée, avec pour chacune le nombre d'exercices réussis (ex: "I. Comment définir l'IA ? - 1/1").
-4.  **Navigation :** Un clic sur une section spécifique d'un chapitre navigue l'utilisateur vers l'écran d'exercices correspondant.
+1.  **Points d'Entrée :** L'utilisateur accède à la certification via la section "Amélioration du score d'employabilité" ou la section "Gamification".
+2.  **Écran de Sélection :** L'utilisateur arrive sur un écran avec deux onglets : "Base" et "Pro".
+3.  **Logique d'Accès :** En cliquant sur un niveau, le système vérifie le statut de l'utilisateur :
+    *   **Cas 1 : Non acheté :** Redirection vers la page de paiement Stripe (en utilisant l'intégration existante).
+    *   **Cas 2 : Acheté et terminé :** Accès direct au tableau de bord du cours pour consultation.
+    *   **Cas 3 : Acheté mais non terminé :** Accès au tableau de bord du cours pour continuer.
 
-### 2.2. Déroulement d'un Exercice (Questionnaire de Section)
+### 2.2. Tableau de Bord du Cours
 
-1.  **Affichage :** L'écran affiche les questions/exercices pour la section sélectionnée.
-2.  **Interaction :** L'utilisateur répond aux questions. Les types de réponses peuvent être : choix unique (radio), choix multiples (checkbox), texte libre (input) ou nombre (input number).
-3.  **Validation :** L'utilisateur clique sur "Valider".
-4.  **Correction :** Pour chaque question, la correction s'affiche (réponse de l'utilisateur, bonne réponse si erreur, explication).
-5.  **Progression :** Une fois l'exercice terminé, l'utilisateur est redirigé vers le tableau de bord principal, qui affiche maintenant sa progression mise à jour.
+1.  **En-tête :** Affiche les statistiques globales : "Progression totale" en % et "Exercices complétés" (ex: 20/25).
+2.  **Grille des Chapitres :**
+    *   Présente les chapitres sous forme de cartes avec illustration et titre.
+    *   Chaque carte liste les sections du chapitre avec leur progression (ex: 1/2).
+    *   **Règle d'affichage :** Pour un cours inachevé, le chapitre en cours est affiché en premier.
+
+### 2.3. Déroulement d'un Chapitre
+
+*   **Type `exercise` :** L'utilisateur clique sur une section, accède à l'écran d'exercices, répond aux questions et obtient une correction immédiate.
+*   **Type `readonly` (Chapitre 6) :** L'utilisateur accède à un écran de lecture et doit faire défiler le contenu jusqu'en bas pour valider le chapitre.
+
+### 2.4. Post-Certification
+
+1.  **Validation Finale :** La validation du chapitre 6 déclenche la fin du cours.
+2.  **Indicateurs de Réussite :** Si le score est suffisant, une icône "check" et la date d'obtention apparaissent sur le bouton d'accès et le profil public. L'utilisateur accède à son certificat.
 
 ## 3. Architecture Technique
 
 ### 3.1. Modèles de Données (Typescript)
 
-La nouvelle structure hiérarchique est la suivante :
-
 ```typescript
 // types/aiCourse.ts
 
-// --- Modèles pour le Tableau de Bord ---
-export interface CourseStats {
-  completionPercentage: number; // Pourcentage de complétion global
-  completedExercises: number;
-  totalExercises: number;
+export type PurchaseStatus = 'not_bought' | 'in_progress' | 'completed';
+export type ChapterType = 'exercise' | 'readonly';
+// Le type 'text' est volontairement omis suite à la nouvelle contrainte.
+export type QuestionType = 'radio' | 'checkbox' | 'number';
+
+export interface CourseDashboard {
+  purchaseStatus: PurchaseStatus;
+  completionDate?: string;
+  stats: { completionPercentage: number; completedExercises: number; totalExercises: number; };
+  chapters: Chapter[];
+}
+
+export interface Chapter {
+  chapterId: string;
+  titleKey: string;
+  illustrationUrl: string;
+  type: ChapterType;
+  sections: SectionProgress[];
 }
 
 export interface SectionProgress {
@@ -52,114 +70,53 @@ export interface SectionProgress {
   totalExercises: number;
 }
 
-export interface Chapter {
-  chapterId: string;
-  titleKey: string;
-  illustrationUrl: string;
-  sections: SectionProgress[];
-}
-
-export interface CourseDashboard {
-  stats: CourseStats;
-  chapters: Chapter[];
-}
-
-// --- Modèles pour un Exercice de Section ---
-export type QuestionType = 'radio' | 'checkbox' | 'text' | 'number';
-
-export interface QuestionOption { /* ... comme avant ... */ }
-
-export interface Question { /* ... comme avant ... */ }
-
-export interface SectionExercise {
+export interface SectionContent {
   sectionId: string;
   titleKey: string;
+  // Le contenu peut être un exercice ou de la lecture
+  content: SectionExercise | ReadonlyContent;
+}
+
+export interface SectionExercise {
   questions: Question[];
 }
-```
 
-#### 3.1.1. Exemple d'un objet Question reçu de l'API
-
-Voici un exemple concret de l'objet JSON pour une seule question, tel qu'il serait retourné par l'API dans le tableau `questions`. Notez comment les `textKey` correspondent à la structure du fichier de traduction.
-
-```json
-{
-  "questionId": "q1",
-  "textKey": "course_ai.chapters.chapter1.sections.section1_1.exercises.q1.text",
-  "questionType": "radio",
-  "options": [
-    {
-      "optionId": "opt1",
-      "textKey": "course_ai.chapters.chapter1.sections.section1_1.exercises.q1.options.opt1"
-    },
-    {
-      "optionId": "opt2",
-      "textKey": "course_ai.chapters.chapter1.sections.section1_1.exercises.q1.options.opt2"
-    }
-  ]
+export interface ReadonlyContent {
+  body: string; // Contenu au format Markdown ou HTML
 }
+
+export interface Question { /* ... */ }
 ```
 
 ### 3.2. Contrat d'API (Endpoints)
 
-*   **Récupérer le tableau de bord :**
-    *   **Endpoint :** `GET /api/ai-course/dashboard`
-    *   **Description :** Récupère toutes les données nécessaires pour afficher l'écran principal du cours.
-    *   **Réponse (200 OK) :** Un objet de type `CourseDashboard`.
-
-*   **Récupérer les exercices d'une section :**
-    *   **Endpoint :** `GET /api/ai-course/section/{sectionId}/exercises`
-    *   **Description :** Récupère la liste des questions pour une section donnée.
-    *   **Réponse (200 OK) :** Un objet de type `SectionExercise`.
-
-*   **Soumettre les réponses d'une section :**
-    *   **Endpoint :** `POST /api/ai-course/section/{sectionId}/submit`
-    *   **Description :** Envoie les réponses, sauvegarde la progression et renvoie la correction.
-    *   **Réponse (200 OK) :** Un objet `feedback` comme défini précédemment.
+*   **`GET /api/ai-course/dashboard/{level}` :** Renvoie l'objet `CourseDashboard`.
+*   **Paiement :** Utilisation de l'endpoint de paiement Stripe existant en passant un identifiant de produit mis à jour (ex: `ai_course_base`).
+*   **`GET /api/ai-course/section/{sectionId}/content` :** Renvoie l'objet `SectionContent` contenant soit les exercices, soit le contenu `readonly`.
+*   **`POST /api/ai-course/section/{sectionId}/submit` :** Pour les sections de type `exercise`.
+*   **`POST /api/ai-course/section/{sectionId}/validate-readonly` :** Pour les sections de type `readonly`.
 
 ### 3.3. Architecture Front-end
 
-*   **Composants React :**
-    *   `CourseDashboardScreen.tsx` : Nouvel écran principal affichant le tableau de bord.
-    *   `ChapterCard.tsx` : Affiche un chapitre et la liste de ses sections.
-    *   `ExerciseScreen.tsx` : Écran qui gère le déroulement d'un questionnaire pour une section (ancien `QuizContainer`).
-    *   `QuestionRenderer.tsx` : Inchangé, affiche dynamiquement une question.
-*   **Gestion de l'État (Redux) :**
-    *   Un slice `courseDashboard.slice.ts` pour les données du tableau de bord.
-    *   Un slice `exercise.slice.ts` pour gérer l'état d'un exercice en cours.
+*   **Composants React :** `CourseSelectionScreen`, `CourseDashboardScreen`, `ExerciseScreen`, `ReadOnlyScreen`, `ChapterCard`, `QuestionRenderer`.
+*   **Gestion de l'État (Redux) :** Un slice `course.slice.ts` gère l'état global du cours, incluant le statut d'achat.
 
 ### 3.4. Gestion des Traductions (i18n)
 
-La stratégie de traduction s'appuie sur le système existant (`/locales`). Le back-end fournit des clés de traduction que le front-end utilise pour afficher le texte dans la langue de l'utilisateur.
+La stratégie s'appuie sur le système existant (clés de traduction fournies par l'API et résolues via les fichiers JSON locaux).
 
 #### 3.4.1. Exemple de Structure dans les Fichiers JSON
-
-Voici un exemple de la manière dont les clés seraient structurées dans un fichier comme `fr.json` pour correspondre aux données envoyées par l'API.
 
 ```json
 {
   "course_ai": {
     "dashboard_title": "Bienvenue au cours !",
-    "stats": {
-      "completion": "Progression totale",
-      "completed_exercises": "Exercices complétés"
-    },
     "chapters": {
       "chapter1": {
         "title": "Qu'est-ce que l'IA ?",
         "sections": {
           "section1_1": {
-            "title": "Comment définir l'IA ?",
-            "exercises": {
-              "q1": {
-                "text": "Quelle est la définition de l'IA ?",
-                "options": {
-                  "opt1": "Option A",
-                  "opt2": "Option B"
-                },
-                "explanation": "Voici pourquoi la réponse est B..."
-              }
-            }
+            "title": "Comment définir l'IA ?"
           }
         }
       }
@@ -168,6 +125,8 @@ Voici un exemple de la manière dont les clés seraient structurées dans un fic
 }
 ```
 
+## 4. Contraintes et Références
 
-## ⚠ Les question libres ne feront pas partie du questionnaire
-![elementsofai screenshot](./elementsofai.png)
+*   **Contrainte :** Les questions de type "texte libre" (`text`) ne feront pas partie du questionnaire.
+*   **Référence Visuelle :**
+    ![elementsofai screenshot](./elementsofai.png)
