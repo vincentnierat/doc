@@ -1,6 +1,6 @@
 # Spécifications Techniques : Cours de Certification IA
 
-**Version : 2.1 (Draft)**
+**Version : 2.2 (Draft)**
 **Date : 16/10/2025**
 
 ## 1. Objectif de la fonctionnalité
@@ -106,5 +106,47 @@ export interface SectionExercise {
     *   Un slice `courseDashboard.slice.ts` pour les données du tableau de bord.
     *   Un slice `exercise.slice.ts` pour gérer l'état d'un exercice en cours.
 
-## Les question libres ne feront pas partie du questionnaire
+### 3.4. Gestion des Traductions (i18n)
+
+La stratégie de traduction s'appuie sur le système existant (`/locales`). Le back-end fournit des clés de traduction que le front-end utilise pour afficher le texte dans la langue de l'utilisateur.
+
+#### 3.4.1. Exemple de Structure dans les Fichiers JSON
+
+Voici un exemple de la manière dont les clés seraient structurées dans un fichier comme `fr.json` pour correspondre aux données envoyées par l'API.
+
+```json
+{
+  "course_ai": {
+    "dashboard_title": "Bienvenue au cours !",
+    "stats": {
+      "completion": "Progression totale",
+      "completed_exercises": "Exercices complétés"
+    },
+    "chapters": {
+      "chapter1": {
+        "title": "Qu'est-ce que l'IA ?",
+        "sections": {
+          "section1_1": {
+            "title": "Comment définir l'IA ?",
+            "exercises": {
+              "q1": {
+                "text": "Quelle est la définition de l'IA ?",
+                "options": {
+                  "opt1": "Option A",
+                  "opt2": "Option B"
+                },
+                "explanation": "Voici pourquoi la réponse est B..."
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+
+
+## ⚠ Les question libres ne feront pas partie du questionnaire
 ![elementsofai screenshot](./elementsofai.png)
